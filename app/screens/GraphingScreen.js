@@ -1,3 +1,4 @@
+// Imports
 import React, { Component } from "react";
 import {
   StyleSheet,
@@ -20,7 +21,6 @@ import DropDownPicker from "react-native-dropdown-picker";
 import Icon from "react-native-vector-icons/Feather";
 import colors from "../config/colors";
 import { ScrollView } from "react-native-gesture-handler";
-import { TouchableWithoutFeedbackBase } from "react-native";
 
 class GraphingScreen extends Component {
   first_run = true;
@@ -30,7 +30,9 @@ class GraphingScreen extends Component {
   socketCounter = 0;
   compareCounter = 0;
   abnormalityLog = "";
+  SERVER_URL = "http://server.makosusa.com:7070";
 
+  // Initial state
   state = {
     overlayOpen: false,
     options: {
@@ -59,19 +61,24 @@ class GraphingScreen extends Component {
   };
   componentDidMount() {
     this._isMounted = true;
-    this.socket = io("http://server.makosusa.com:7070");
+    this.socket = io(this.SERVER_URL);
 
+    // Receiving data from server socket
     this.socket.on("graphData", (gdata) => {
+      // Temp variable holding received data
       let tmp = {
         x: gdata.time,
         y: gdata.graph_data,
       };
       ++this.socketCounter;
+
+      // Ensuring socket is kept alive
       if (this.socketCounter >= 5) {
         this.socketCounter = 0;
         this.socket.emit("renewChannel");
       }
 
+      // Scale y-axis based on select dataset
       if (
         this.state.options.dataset === "dataset2" ||
         this.state.options.dataset === "dataset3"
@@ -83,19 +90,24 @@ class GraphingScreen extends Component {
             compareData: gdata.compare,
           },
           () => {
+            // If compare is selected, run comparison function
             if (this.state.options.graphingType === "compare")
               this.compareECG(tmp.x, tmp.y, this.state.compareData);
           }
         );
       } else {
+        // Reset scaling if needed
         this.setState({
           minY: 0,
           maxY: 10,
         });
       }
 
+      // Push data to array
       let tmpData = Array.from(this.state.data);
       tmpData.push(tmp);
+
+      // Push comparison data to array
       let tmpCompareData = Array.from(this.state.compareDataPoints);
       if (this.state.options.graphingType === "compare") {
         tmpCompareData.push({
@@ -104,6 +116,7 @@ class GraphingScreen extends Component {
         });
       }
 
+      // If array limit is reached, pop first element in respective array(s)
       if (tmpData.length > this.xvaluesOnScreen) {
         tmpData.shift();
         if (this.state.options.graphingType === "compare") {
@@ -128,6 +141,7 @@ class GraphingScreen extends Component {
     });
   }
 
+  // Comparing data
   compareECG(x, y, toCompare) {
     if (
       Math.abs(y * 1.3) >= Math.abs(toCompare) &&
@@ -138,6 +152,7 @@ class GraphingScreen extends Component {
     this.abnormalityLog += "Data abnormality found at (" + x + "," + y + ")\n";
   }
 
+  // Show/disable array depending on if comparison is selected
   toggleOverlay() {
     this.setState({
       overlayOpen: !this.state.overlayOpen,
@@ -148,6 +163,7 @@ class GraphingScreen extends Component {
     this._isMounted = false;
   }
 
+  // Alter graph when options are submitted
   graphButton() {
     this.socket.emit("graphOptions", this.state.options);
     this.resetGraph();
@@ -155,6 +171,7 @@ class GraphingScreen extends Component {
     this.pressedStop();
   }
 
+  // Reset graph to origin attributes
   resetGraph() {
     this.setState({
       data: [
@@ -176,6 +193,7 @@ class GraphingScreen extends Component {
     this.abnormalityLog = "";
   }
 
+  // Start graph
   pressedStart() {
     if (this.first_run === true) {
       this.first_run = false;
@@ -183,6 +201,7 @@ class GraphingScreen extends Component {
     this.socket.emit("startGraph");
   }
 
+  // Stop graph
   pressedStop() {
     this.socket.emit("stopGraph");
   }
@@ -191,6 +210,7 @@ class GraphingScreen extends Component {
     return (
       <SafeAreaView>
         <ScrollView style={styles.background}>
+          {/* Settings pannel */}
           <View>
             <Button
               title="Settings"
@@ -286,6 +306,9 @@ class GraphingScreen extends Component {
               </View>
             </Overlay>
           </View>
+          {/* /Settings pannel */}
+
+          {/* Graph */}
           <Text style={styles.graphTitle}>Graph</Text>
 
           <Chart
@@ -328,7 +351,9 @@ class GraphingScreen extends Component {
               }}
             />
           </Chart>
+          {/* /Graph */}
 
+          {/* Start/Stop buttons */}
           <View style={styles.buttonBackground}>
             <TouchableHighlight
               style={styles.startButton}
@@ -343,6 +368,9 @@ class GraphingScreen extends Component {
               <Text style={styles.buttonText}>Stop</Text>
             </TouchableHighlight>
           </View>
+          {/* Start/Stop buttons */}
+
+          {/* Compare Grpah */}
           <View opacity={this.state.graphingType === "compare" ? 0 : 100}>
             {this.state.options.graphingType === "compare" ? (
               <Text style={styles.graphTitle}>Comparison</Text>
@@ -391,6 +419,7 @@ class GraphingScreen extends Component {
             ) : null}
             <Text style={{ color: colors.white }}>{this.abnormalityLog}</Text>
           </View>
+          {/* /Compare Grpah */}
         </ScrollView>
       </SafeAreaView>
     );

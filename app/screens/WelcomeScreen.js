@@ -6,7 +6,6 @@ import {
   TouchableHighlight,
   SafeAreaView,
 } from "react-native";
-import colors from "../config/colors";
 
 function WelcomeScreen({ navigation }) {
   const graphPress = () => {
